@@ -16,7 +16,9 @@ audio = audiorecorder("Click to record", "Click to stop recording")
 if st.button('Upload recording') and len(audio) > 0:
     filename = str(datetime.now())
     url = f's3://mdc-transcribe/{filename}.mp3'
-    with open(url, 'wb', transport_params={'client': s3.client('s3')}) as fout:
+    with open(url, 'ab', transport_params={'client': s3.client('s3')}) as fout:
         audio.export(fout, format='mp3')
+    st.write("Done!")
+    audio = None
 
 # s3.meta.client.upload_file('filename', 'mdc-transcribe', 'desired filename in s3')

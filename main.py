@@ -4,7 +4,7 @@ import numpy as np
 import boto3
 from smart_open import open
 from audiorecorder import audiorecorder
-import datetime
+from datetime import datetime
 
 st.title('mdc Clinical Notes')
 

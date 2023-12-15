@@ -7,9 +7,12 @@ name = "pypi"
 boto3 = "*"
 pandas = "*"
 numpy = "*"
-streamlit-audiorec = "*"
+streamlit-audiorecorder = "*"
+smart_open[s3] = "*"
+datetime = "*"
 
 [dev-packages]
+ffmpeg="*"
 
 [requires]
 python_version = "3.9"

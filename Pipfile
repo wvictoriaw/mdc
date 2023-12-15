@@ -12,7 +12,7 @@ smart_open[s3] = "*"
 datetime = "*"
 
 [dev-packages]
-ffmpeg="*"
+ffmpeg
 
 [requires]
 python_version = "3.9"

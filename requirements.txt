@@ -2,5 +2,5 @@ boto3
 pandas
 numpy
 streamlit-audiorecorder
-smart_open[s3]
 datetime
+io

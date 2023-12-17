@@ -28,5 +28,4 @@ if st.button('Upload recording') and len(audio) > 0:
     Body=buffer)
     st.write("Done!")
     audio = None
-
 # s3.meta.client.upload_file('filename', 'mdc-transcribe', 'desired filename in s3')

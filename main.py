@@ -17,9 +17,6 @@ audio = audiorecorder("Click to record", "Click to stop recording")
 if st.button('Upload recording') and len(audio) > 0:
     filename = str(datetime.now())
     url = f's3://mdc-transcribe/{filename}.mp3'
-    cli.put_object(
-    Bucket='mdc-transcribe',
-    Key=f'{filename}.mp3')
     buffer = io.BytesIO()
     audio.export(buffer, format="wav")
     cli.put_object(

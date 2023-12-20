@@ -80,7 +80,7 @@ with tab2:
 
     scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
     scribes.sort(reverse=True)
-    scribes[:5]
+    scribes = scribes[:5]
     summary = st.selectbox("Select a scribe to view",scribes)
 
     if st.button("View Scribe"):

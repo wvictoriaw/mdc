@@ -43,8 +43,9 @@ with tab1:
     st.divider()
     st.subheader("Scribe Recording")
 
-    files = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-transcribe', MaxKeys=5)['Contents']]
+    files = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-transcribe')['Contents']]
     files.sort(reverse=True)
+    files = files[:5]
 
     select = st.selectbox("Choose the audio to scribe:", files)
 
@@ -77,8 +78,9 @@ with tab1:
 
 with tab2:
 
-    scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/", MaxKeys=11)['CommonPrefixes']]
+    scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
     scribes.sort(reverse=True)
+    scribes[:5]
     summary = st.selectbox("Select a scribe to view",scribes)
 
     if st.button("View Scribe"):

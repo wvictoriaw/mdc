@@ -13,7 +13,8 @@ import json
 st.title('mdc Clinical Notes')
 
 s3 = boto3.Session(aws_access_key_id=st.secrets['aws_access_key'], 
-                    aws_secret_access_key=st.secrets['aws_secret_access_key'])
+                    aws_secret_access_key=st.secrets['aws_secret_access_key'],
+                    region_name = 'us-east-1')
 cli = s3.client('s3')
 
 tab1, tab2 = st.tabs(["Record & Scribe", "View Results"])

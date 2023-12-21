@@ -9,8 +9,12 @@ import io
 from zoneinfo import ZoneInfo
 import time
 import json
+# from fpdf import FPDF
 
-st.title('mdc Clinical Notes')
+if "audio" not in st.session_state:
+    st.session_state.audio = ""
+
+st.title('mNote', anchor=False)
 
 s3 = boto3.Session(aws_access_key_id=st.secrets['aws_access_key'], 
                     aws_secret_access_key=st.secrets['aws_secret_access_key'],
@@ -20,28 +24,51 @@ cli = s3.client('s3')
 tab1, tab2 = st.tabs(["Record & Scribe", "View Results"])
 
 with tab1:
-    st.subheader('Voice Record')
-    col1, col2 = st.columns(2)
-    with col1:
-        audio = audiorecorder("Click to record", "Click to stop recording")
-    with col2:
-        upl = st.button('Upload recording')
+    st.subheader('Voice Record', anchor=False)
 
-    if upl and len(audio) > 0:
-        
-        filename = str(datetime.now().astimezone(ZoneInfo('Asia/Shanghai')).strftime("%Y-%m-%d_%H:%M:%S"))
-        url = f's3://mdc-transcribe/{filename}.mp3'
-        buffer = io.BytesIO()
-        audio.export(buffer, format="wav")
-        cli.put_object(
-        Bucket='mdc-transcribe',
-        Key=f'{filename}.wav',
-        Body=buffer)
-        st.subheader(":green[Done!]")
-        audio = None
+    audio = audiorecorder("Click to record", "Click to stop recording")
+    aud = len(audio) > 0
+    wrapper = st.empty()
+    with wrapper.container():
+        if aud:
+            con = st.empty()
+            with con.container():
+                st.success('Recording is ready for upload! :tada:')
+
+            upl = False
+            uplcon = st.empty()
+            with uplcon.container():
+                upl = st.button('Upload recording', type='primary')
+            recagain = st.empty()
+            with recagain.container(): 
+                if st.button("Record again"):
+                    wrapper.empty()
+
+
+            if upl and len(audio) > 0:
+                recagain.empty()
+                con.empty()
+                with con.container():
+                    st.info('Upload in progress...')
+                filename = str(datetime.now().astimezone(ZoneInfo('Asia/Shanghai')).strftime("%Y-%m-%d_%H:%M:%S"))
+                url = f's3://mdc-transcribe/{filename}.mp3'
+                buffer = io.BytesIO()
+                audio.export(buffer, format="wav")
+                cli.put_object(
+                Bucket='mdc-transcribe',
+                Key=f'{filename}.wav',
+                Body=buffer)
+                with con.container():
+                    st.success("Upload done! :tada:")
+                uplcon.empty()
+                with recagain.container(): 
+                    if st.button("Create another transcript", type='primary'):
+                        wrapper.empty()
+                audio = None
+                
 
     st.divider()
-    st.subheader("Scribe Recording")
+    st.subheader("Scribe Recording", anchor=False)
 
     files = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-transcribe')['Contents']]
     files.sort(reverse=True)
@@ -67,14 +94,14 @@ with tab1:
                 }
             )
         except:
-            st.write("**This clip has already been scribed! Please scroll down to view it.**")
+            st.write("**This clip has already been scribed! You may download it in the View Results tab.**")
         
         else:
             while response['MedicalScribeJob']["MedicalScribeJobStatus"] != "COMPLETED":
                 time.sleep(30)
                 response = transcli.get_medical_scribe_job(MedicalScribeJobName=job_name)
 
-            st.write(response)
+            st.subheader(":green[Scribe complete!]", anchor=False)
 
 with tab2:
 
@@ -83,15 +110,18 @@ with tab2:
     scribes = scribes[:5]
     summary = st.selectbox("Select a scribe to view",scribes)
 
-    if st.button("View Scribe"):
+    typ = st.radio("scribe type", ["Patient's View", "Doctor's View"], label_visibility='collapsed', horizontal=True)
+
+    if st.button("View Scribe", type='primary'):
         scr = cli.get_object(Bucket='mdc-output', Key=summary+'/summary.json')['Body'].read().decode('utf-8')
         json_content = json.loads(scr)
         sections = json_content['ClinicalDocumentation']['Sections']
-        wanted = [0,2,5]
+
+        wanted = [0,2,5] if typ == "Patient's View" else [4]
         for i in wanted:
             sect = sections[i]
             title = sect['SectionName'].replace("_", " ").lower()
-            st.subheader(f':blue[{title}]')
+            st.subheader(f':blue[{title}]', anchor=False)
             container = st.container(border=True)
             for summ in sect['Summary']:
                 seg = summ['SummarizedSegment']

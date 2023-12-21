@@ -61,10 +61,9 @@ with tab1:
                 with con.container():
                     st.success("Upload done! :tada:")
                 uplcon.empty()
-                with recagain.container(): 
-                    if st.button("Create another transcript", type='primary'):
-                        wrapper.empty()
-                audio = None
+            with recagain.container(): 
+                if st.button("Start a new transcript"):
+                    wrapper.empty()
                 
 
     st.divider()
@@ -101,7 +100,7 @@ with tab1:
                 time.sleep(30)
                 response = transcli.get_medical_scribe_job(MedicalScribeJobName=job_name)
 
-            st.subheader(":green[Scribe complete!]", anchor=False)
+            st.success("Scribe complete! :tada:")
 
 with tab2:
 

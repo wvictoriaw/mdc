@@ -9,10 +9,8 @@ import io
 from zoneinfo import ZoneInfo
 import time
 import json
-# from fpdf import FPDF
+import pdfkit
 
-if "audio" not in st.session_state:
-    st.session_state.audio = ""
 
 st.title('mNote', anchor=False)
 
@@ -21,10 +19,10 @@ s3 = boto3.Session(aws_access_key_id=st.secrets['aws_access_key'],
                     region_name = 'us-east-1')
 cli = s3.client('s3')
 
-tab1, tab2 = st.tabs(["Record & Scribe", "View Results"])
+tab1, tab2 = st.tabs(["Record & Scribe", "View Summary"])
 
 with tab1:
-    st.subheader('Voice Record', anchor=False)
+    st.subheader('Record Consultation', anchor=False)
 
     audio = audiorecorder("Click to record", "Click to stop recording")
     aud = len(audio) > 0
@@ -67,17 +65,20 @@ with tab1:
                 
 
     st.divider()
-    st.subheader("Scribe Recording", anchor=False)
+    st.subheader("Summarise a Recording", anchor=False)
 
     files = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-transcribe')['Contents']]
     files.sort(reverse=True)
     files = files[:5]
 
-    select = st.selectbox("Choose the audio to scribe:", files)
+    select = st.selectbox("Choose the audio to summarise:", files)
 
 
     transcli = s3.client('transcribe')
-    if st.button('Start Scribing'):
+    if st.button('Start Summarising', type='primary'):
+        inf = st.empty()
+        with inf.container():
+            st.info('Summarising...')
         job_name = str(select).replace(':', '.').replace(' ','_')
         try:
             response = transcli.start_medical_scribe_job(
@@ -93,36 +94,67 @@ with tab1:
                 }
             )
         except:
-            st.write("**This clip has already been scribed! You may download it in the View Results tab.**")
+            st.write("**This clip has already been summarised! You may download it in the View Summary tab.**")
         
         else:
             while response['MedicalScribeJob']["MedicalScribeJobStatus"] != "COMPLETED":
                 time.sleep(30)
                 response = transcli.get_medical_scribe_job(MedicalScribeJobName=job_name)
-
-            st.success("Scribe complete! :tada:")
+            
+            inf.empty()
+            with inf.container():
+                st.success("Scribe complete! :tada:")
 
 with tab2:
 
     scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
     scribes.sort(reverse=True)
     scribes = scribes[:5]
-    summary = st.selectbox("Select a scribe to view",scribes)
+    summary = st.selectbox("Select a summary to view",scribes)
 
-    typ = st.radio("scribe type", ["Patient's View", "Doctor's View"], label_visibility='collapsed', horizontal=True)
+    typ = st.radio("summary type", ["Doctor's View", "Patient's View"], label_visibility='collapsed', horizontal=True)
 
-    if st.button("View Scribe", type='primary'):
+    dt = summary[:10]
+    
+    html = f'''<div style='width:100px;height:auto;position:absolute;right:0;top:-20px'><img src='https://static.tumblr.com/c1oapfr/8nTs6bnlb/logo_watermark.png' width='100%'></div>
+    <h1 style='color:#005a97; font-family:"Helvetica";margin:0;padding:0;'>Consultation Summary</h1>
+<p style='color:#879198; font-family:"Helvetica";font-size:12pt;margin:0;padding:2px;'><b>{typ}</b></p>
+<p style='font-family:"Helvetica";color:#999;font-size:11pt;'>Date of consultation: {dt}</p>'''
+
+    if st.button("View Summary", type='primary'):
+        load = st.empty()
+        with load.container():
+            st.info("Loading...")
         scr = cli.get_object(Bucket='mdc-output', Key=summary+'/summary.json')['Body'].read().decode('utf-8')
         json_content = json.loads(scr)
         sections = json_content['ClinicalDocumentation']['Sections']
 
         wanted = [0,2,5] if typ == "Patient's View" else [4]
+        
+        load.empty()
         for i in wanted:
             sect = sections[i]
-            title = sect['SectionName'].replace("_", " ").lower()
+            title = sect['SectionName'].replace("_", " ").title()
+            html += f'''<br>
+<h2 style='color:#005a97; font-family:"Helvetica"; font-size:18pt'>{title}</h2>
+<div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
             st.subheader(f':blue[{title}]', anchor=False)
             container = st.container(border=True)
             for summ in sect['Summary']:
                 seg = summ['SummarizedSegment']
                 container.write(seg)
-            
+                html += f'''<p style='font-family:"Helvetica";line-height:25pt;'>{seg}</p>'''
+            html += "</div>"
+
+        pdf = pdfkit.from_string(html)
+        pdf_stream = io.BytesIO()
+
+        pdf_stream.write(pdf)
+
+        st.download_button(
+            label="Download Summary",
+            data = pdf_stream,
+            file_name = f'consult summary_{dt}_{typ}.pdf',
+            mime = 'application/pdf',
+            type = 'primary'
+        )

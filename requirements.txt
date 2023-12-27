@@ -3,4 +3,4 @@ pandas
 numpy
 streamlit-audiorecorder
 datetime
-fpdf
+pdfkit

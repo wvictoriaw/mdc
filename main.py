@@ -117,9 +117,9 @@ with tab2:
     dt = summary[:10]
     
     html = f'''<div style='width:100px;height:auto;position:absolute;right:0;top:-20px'><img src='https://static.tumblr.com/c1oapfr/8nTs6bnlb/logo_watermark.png' width='100%'></div>
-    <h1 style='color:#005a97; font-family:"Helvetica";margin:0;padding:0;'>Consultation Summary</h1>
-<p style='color:#879198; font-family:"Helvetica";font-size:12pt;margin:0;padding:2px;'><b>{typ}</b></p>
-<p style='font-family:"Helvetica";color:#999;font-size:11pt;'>Date of consultation: {dt}</p>'''
+    <h1 style='color:#005a97; font-family:sans-serif;margin:0;padding:0;'>Consultation Summary</h1>
+<p style='color:#879198; font-family:sans-serif;font-size:12pt;margin:0;padding:2px;'><b>{typ}</b></p>
+<p style='font-family:sans-serif;color:#999;font-size:11pt;'>Date of consultation: {dt}</p>'''
 
     if st.button("View Summary", type='primary'):
         load = st.empty()
@@ -136,14 +136,14 @@ with tab2:
             sect = sections[i]
             title = sect['SectionName'].replace("_", " ").title()
             html += f'''<br>
-<h2 style='color:#005a97; font-family:"Helvetica"; font-size:18pt'>{title}</h2>
+<h2 style='color:#005a97; font-family:sans-serif; font-size:18pt'>{title}</h2>
 <div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
             st.subheader(f':blue[{title}]', anchor=False)
             container = st.container(border=True)
             for summ in sect['Summary']:
                 seg = summ['SummarizedSegment']
                 container.write(seg)
-                html += f'''<p style='font-family:"Helvetica";line-height:25pt;'>{seg}</p>'''
+                html += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
             html += "</div>"
 
         pdf = pdfkit.from_string(html)

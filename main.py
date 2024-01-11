@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 import time
 import json
 import pdfkit
+from streamlit_quill import st_quill
 
 
 st.title('mNote', anchor=False)
@@ -19,7 +20,7 @@ s3 = boto3.Session(aws_access_key_id=st.secrets['aws_access_key'],
                     region_name = 'us-east-1')
 cli = s3.client('s3')
 
-tab1, tab2 = st.tabs(["Record & Scribe", "View Summary"])
+tab1, tab2, tab3 = st.tabs(["Record & Scribe", "View Summary", "Report Generator"])
 
 with tab1:
     st.subheader('Record Consultation', anchor=False)
@@ -98,7 +99,7 @@ with tab1:
         
         else:
             while response['MedicalScribeJob']["MedicalScribeJobStatus"] != "COMPLETED":
-                time.sleep(30)
+                time.sleep(15)
                 response = transcli.get_medical_scribe_job(MedicalScribeJobName=job_name)
             
             inf.empty()
@@ -106,10 +107,10 @@ with tab1:
                 st.success("Scribe complete! :tada:")
 
 with tab2:
-
+    
     scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
     scribes.sort(reverse=True)
-    scribes = scribes[:5]
+    scribes = scribes
     summary = st.selectbox("Select a summary to view",scribes)
 
     typ = st.radio("summary type", ["Doctor's View", "Patient's View"], label_visibility='collapsed', horizontal=True)
@@ -142,7 +143,7 @@ with tab2:
             container = st.container(border=True)
             for summ in sect['Summary']:
                 seg = summ['SummarizedSegment']
-                container.write(seg)
+                container.write(seg.replace("$", "\$"))
                 html += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
             html += "</div>"
 
@@ -158,3 +159,58 @@ with tab2:
             mime = 'application/pdf',
             type = 'primary'
         )
+
+    with tab3:
+        st.header(":building_construction: UNDER CONSTRUCTION", anchor=False)
+    #     scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
+    #     scribes.sort(reverse=True)
+    #     scribes = scribes[:5]
+    #     template = st.selectbox("Select a summary to start editing",scribes)
+
+    #     dt = template[:10]
+    #     sects = [0,2,4,5]
+    
+    #     header = f'''<div style='width:100px;height:auto;position:absolute;right:0;top:-20px'><img src='https://static.tumblr.com/c1oapfr/8nTs6bnlb/logo_watermark.png' width='100%'></div>
+    #     <h1 style='color:#005a97; font-family:sans-serif;margin:0;padding:0;'>Consultation Summary</h1>
+    # <p style='color:#879198; font-family:sans-serif;font-size:12pt;margin:0;padding:2px;'><b>Doctor's Report</b></p>
+    # <p style='font-family:sans-serif;color:#999;font-size:11pt;'>Date of consultation: {dt}</p>'''
+        
+    #     if 'report' not in st.session_state:
+    #         st.session_state.report = ""
+        
+    #     txt = ""
+    #     dict = {}
+    #     if st.button("Start Editing", type='primary'):
+        
+    #         scr = cli.get_object(Bucket='mdc-output', Key=summary+'/summary.json')['Body'].read().decode('utf-8')
+    #         json_content = json.loads(scr)
+    #         sections = json_content['ClinicalDocumentation']['Sections']
+            
+    #         for i in sects:
+    #             sect = sections[i]
+    #             title = sect['SectionName'].replace("_", " ").title()
+    #             txt += f'''<br>
+    # <h2 style='color:#005a97; font-family:sans-serif; font-size:18pt'>{title}</h2>
+    # <div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
+    #             for summ in sect['Summary']:
+    #                 seg = summ['SummarizedSegment']
+    #                 txt += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
+    #             txt += "</div>"
+    #             dict[title] = seg
+
+    #         # pdf = pdfkit.from_string(html)
+    #         # pdf_stream = io.BytesIO()
+
+    #         # pdf_stream.write(pdf)
+
+    #         # st.download_button(
+    #         #     label="Download Summary",
+    #         #     data = pdf_stream,
+    #         #     file_name = f'consult summary_{dt}_{typ}.pdf',
+    #         #     mime = 'application/pdf',
+    #         #     type = 'primary'
+    #         # )
+    #         st.session_state.report= txt
+        
+    #     output = st_quill(value=st.session_state.report)
+    #     st.text(output)

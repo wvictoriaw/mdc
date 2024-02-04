@@ -101,7 +101,7 @@ with tab1:
             while response['MedicalScribeJob']["MedicalScribeJobStatus"] != "COMPLETED":
                 time.sleep(15)
                 response = transcli.get_medical_scribe_job(MedicalScribeJobName=job_name)
-            
+
             inf.empty()
             with inf.container():
                 st.success("Scribe complete! :tada:")
@@ -110,17 +110,11 @@ with tab2:
     
     scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
     scribes.sort(reverse=True)
-    scribes = scribes
     summary = st.selectbox("Select a summary to view",scribes)
 
     typ = st.radio("summary type", ["Doctor's View", "Patient's View"], label_visibility='collapsed', horizontal=True)
 
     dt = summary[:10]
-    
-    html = f'''<div style='width:100px;height:auto;position:absolute;right:0;top:-20px'><img src='https://static.tumblr.com/c1oapfr/8nTs6bnlb/logo_watermark.png' width='100%'></div>
-    <h1 style='color:#005a97; font-family:sans-serif;margin:0;padding:0;'>Consultation Summary</h1>
-<p style='color:#879198; font-family:sans-serif;font-size:12pt;margin:0;padding:2px;'><b>{typ}</b></p>
-<p style='font-family:sans-serif;color:#999;font-size:11pt;'>Date of consultation: {dt}</p>'''
 
     if st.button("View Summary", type='primary'):
         load = st.empty()
@@ -136,81 +130,122 @@ with tab2:
         for i in wanted:
             sect = sections[i]
             title = sect['SectionName'].replace("_", " ").title()
-            html += f'''<br>
-<h2 style='color:#005a97; font-family:sans-serif; font-size:18pt'>{title}</h2>
-<div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
             st.subheader(f':blue[{title}]', anchor=False)
             container = st.container(border=True)
             for summ in sect['Summary']:
                 seg = summ['SummarizedSegment']
                 container.write(seg.replace("$", "\$"))
-                html += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
-            html += "</div>"
+
+    with tab3:
+
+        if 'retrieve_doc' not in st.session_state:
+            st.session_state.retrieve_doc = ""
+
+        if 'report' not in st.session_state:
+            st.session_state.report = ""
+
+        if 'download_ready' not in st.session_state:
+            st.session_state.download_ready = ""
+        
+        if 'download_report' not in st.session_state:
+            st.session_state.download_report = ""
+
+        if 'download_name' not in st.session_state:
+            st.session_state.download_name = ""
+
+        if 'report_name' not in st.session_state:
+            st.session_state.report_name = ""
+
+        sects = [0,2,4,5]
+
+        st.subheader("Generate / Edit a Report", anchor=None)
+
+        edit_or_create = st.radio("edit_or_create",["Generate a new report", "Edit an existing report"], label_visibility = "hidden")
+        if edit_or_create == "Generate a new report":
+            scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
+            scribes.sort(reverse=True)
+            st.session_state.retrieve_doc = st.selectbox("Select Scribe:", scribes)
+        else:
+            scribes = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-reports')['Contents']]
+            st.session_state.retrieve_doc = st.selectbox("Select Report:", scribes)
+        load_report = st.button("Load Report")
+
+        if load_report:
+            if edit_or_create == "Generate a new report":
+                scr = cli.get_object(Bucket='mdc-output', Key=st.session_state.retrieve_doc+'/summary.json')['Body'].read().decode('utf-8')
+                json_content = json.loads(scr)
+                sections = json_content['ClinicalDocumentation']['Sections']
+            
+                txt = ""
+
+                for i in sects:
+                    sect = sections[i]
+                    title = sect['SectionName'].replace("_", " ").title()
+                    txt += f'''<br>
+        <h2 style='color:#005a97; font-family:sans-serif; font-size:18pt'>{title}</h2>
+        <div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
+                    for summ in sect['Summary']:
+                        seg = summ['SummarizedSegment']
+                        txt += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
+                    txt += "</div>"
+                
+                st.session_state.report = txt
+                st.session_state.report_name = summary[:10]
+            else:
+                st.session_state.report = cli.get_object(Bucket="mdc-reports", Key=st.session_state.retrieve_doc)['Body'].read().decode('utf-8')
+                st.session_state.report_name = st.session_state.retrieve_doc
+                
+        
+        with st.form("report_generator"):
+            if len(st.session_state.report) > 5:
+                output = st_quill(value=st.session_state.report, html=True)
+
+                report_name = st.text_input("Enter report name here: ", value=st.session_state.report_name[:-4])
+
+                submitted = st.form_submit_button("Save")
+                
+                if submitted:
+                    st.session_state.report = output
+                    st.session_state.report_name = report_name
+
+                    cli.put_object(Bucket='mdc-reports', Key=f'{st.session_state.report_name}.txt', Body=st.session_state.report)
+
+                    st.success("Report saved! :tada:")
+
+                    st.session_state.download_ready = True
+                
+
+        st.subheader("Download a Report", anchor=None)
+
+        with st.form("download"):
+            scribes = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-reports')['Contents']]
+            st.session_state.download_name = st.selectbox("Select Report:", scribes)
+
+            if st.form_submit_button("Prepare Download"):
+                st.session_state.download_report = cli.get_object(Bucket="mdc-reports", Key=st.session_state.download_name)['Body'].read().decode('utf-8')
+                st.session_state.download_ready = True
+
+        
+        html = f'''
+        <div style='width:100px;height:auto;position:absolute;right:0;top:-20px'><img src='https://static.tumblr.com/c1oapfr/8nTs6bnlb/logo_watermark.png' width='100%'></div>
+    <h1 style='color:#005a97; font-family:sans-serif;margin:0;padding:0;'>Consultation Summary</h1>
+<p style='color:#879198; font-family:sans-serif;font-size:12pt;margin:0;padding:2px;'><b>Doctor's Report</b></p>
+<p style='font-family:sans-serif;color:#999;font-size:11pt;'>Report: {st.session_state.download_name[:-4]}</p>
+<div style="font-family:sans-serif;">{st.session_state.download_report}</div>
+'''
 
         pdf = pdfkit.from_string(html)
         pdf_stream = io.BytesIO()
-
         pdf_stream.write(pdf)
 
-        st.download_button(
-            label="Download Summary",
-            data = pdf_stream,
-            file_name = f'consult summary_{dt}_{typ}.pdf',
-            mime = 'application/pdf',
-            type = 'primary'
-        )
+        if st.session_state.download_ready:
 
-    with tab3:
-        st.header(":building_construction: UNDER CONSTRUCTION", anchor=False)
-    #     scribes = [x['Prefix'][:-1] for x in cli.list_objects_v2(Bucket='mdc-output', Delimiter="/")['CommonPrefixes']]
-    #     scribes.sort(reverse=True)
-    #     scribes = scribes[:5]
-    #     template = st.selectbox("Select a summary to start editing",scribes)
-
-    #     dt = template[:10]
-    #     sects = [0,2,4,5]
-    
-    #     header = f'''<div style='width:100px;height:auto;position:absolute;right:0;top:-20px'><img src='https://static.tumblr.com/c1oapfr/8nTs6bnlb/logo_watermark.png' width='100%'></div>
-    #     <h1 style='color:#005a97; font-family:sans-serif;margin:0;padding:0;'>Consultation Summary</h1>
-    # <p style='color:#879198; font-family:sans-serif;font-size:12pt;margin:0;padding:2px;'><b>Doctor's Report</b></p>
-    # <p style='font-family:sans-serif;color:#999;font-size:11pt;'>Date of consultation: {dt}</p>'''
-        
-    #     if 'report' not in st.session_state:
-    #         st.session_state.report = ""
-        
-    #     txt = ""
-    #     dict = {}
-    #     if st.button("Start Editing", type='primary'):
-        
-    #         scr = cli.get_object(Bucket='mdc-output', Key=summary+'/summary.json')['Body'].read().decode('utf-8')
-    #         json_content = json.loads(scr)
-    #         sections = json_content['ClinicalDocumentation']['Sections']
-            
-    #         for i in sects:
-    #             sect = sections[i]
-    #             title = sect['SectionName'].replace("_", " ").title()
-    #             txt += f'''<br>
-    # <h2 style='color:#005a97; font-family:sans-serif; font-size:18pt'>{title}</h2>
-    # <div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
-    #             for summ in sect['Summary']:
-    #                 seg = summ['SummarizedSegment']
-    #                 txt += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
-    #             txt += "</div>"
-    #             dict[title] = seg
-
-    #         # pdf = pdfkit.from_string(html)
-    #         # pdf_stream = io.BytesIO()
-
-    #         # pdf_stream.write(pdf)
-
-    #         # st.download_button(
-    #         #     label="Download Summary",
-    #         #     data = pdf_stream,
-    #         #     file_name = f'consult summary_{dt}_{typ}.pdf',
-    #         #     mime = 'application/pdf',
-    #         #     type = 'primary'
-    #         # )
-    #         st.session_state.report= txt
-        
-    #     output = st_quill(value=st.session_state.report)
-    #     st.text(output)
+            download_report = st.download_button(
+                    label="Download Summary",
+                    data = pdf_stream,
+                    file_name = f'mNote_{st.session_state.download_name[:-4]}.pdf',
+                    mime = 'application/pdf',
+                    type = 'primary'
+                )
+            if download_report:
+                st.session_state.download_ready = False

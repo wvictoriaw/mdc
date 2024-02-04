@@ -200,7 +200,9 @@ with tab2:
             if len(st.session_state.report) > 5:
                 output = st_quill(value=st.session_state.report, html=True)
 
-                report_name = st.text_input("Enter report name here: ", value=st.session_state.report_name[:-4])
+                st.session_state.report_name = st.session_state.report_name.split(".")[0]
+
+                report_name = st.text_input("Enter report name here: ", value=st.session_state.report_name)
 
                 submitted = st.form_submit_button("Save")
                 

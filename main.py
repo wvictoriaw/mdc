@@ -221,6 +221,7 @@ with tab2:
 
         with st.form("download"):
             scribes = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-reports')['Contents']]
+            scribes.sort(reverse=True)
             st.session_state.download_name = st.selectbox("Select Report:", scribes)
 
             if st.form_submit_button("Prepare Download"):

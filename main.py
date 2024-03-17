@@ -11,8 +11,32 @@ import time
 import json
 import pdfkit
 from streamlit_quill import st_quill
+import time
+
+# init
+if 'retrieve_doc' not in st.session_state:
+    st.session_state.retrieve_doc = ""
+
+if 'report' not in st.session_state:
+    st.session_state.report = ""
+
+if 'download_ready' not in st.session_state:
+    st.session_state.download_ready = ""
+
+if 'download_report' not in st.session_state:
+    st.session_state.download_report = ""
+
+if 'download_name' not in st.session_state:
+    st.session_state.download_name = ""
+
+if 'report_name' not in st.session_state:
+    st.session_state.report_name = ""
+
+if 'done' not in st.session_state:
+    st.session_state.done = False
 
 
+# execute
 st.title('mNote', anchor=False)
 
 s3 = boto3.Session(aws_access_key_id=st.secrets['aws_access_key'], 
@@ -30,36 +54,42 @@ with tab1:
     wrapper = st.empty()
     with wrapper.container():
         if aud:
+            buffer = io.BytesIO()
+            audio.export(buffer, format="wav")
             con = st.empty()
             with con.container():
-                st.success('Recording is ready for upload! :tada:')
-
-            upl = False
-            uplcon = st.empty()
-            with uplcon.container():
-                upl = st.button('Upload recording', type='primary')
-            recagain = st.empty()
-            with recagain.container(): 
-                if st.button("Record again"):
-                    wrapper.empty()
-
-
-            if upl and len(audio) > 0:
+                    st.success("Ready for download! :tada:")
+            def upl_amz():
                 recagain.empty()
                 con.empty()
                 with con.container():
                     st.info('Upload in progress...')
-                filename = str(datetime.now().astimezone(ZoneInfo('Asia/Shanghai')).strftime("%Y-%m-%d_%H:%M:%S"))
-                url = f's3://mdc-transcribe/{filename}.mp3'
-                buffer = io.BytesIO()
-                audio.export(buffer, format="wav")
+                
                 cli.put_object(
                 Bucket='mdc-transcribe',
                 Key=f'{filename}.wav',
                 Body=buffer)
+
+                st.session_state.done = True
+                
+
+            uplcon = st.empty()
+            recagain = st.empty()
+            with recagain.container(): 
+                if st.button("Record again"):
+                    wrapper.empty()
+            with uplcon.container():
+                filename = str(datetime.now().astimezone(ZoneInfo('Asia/Shanghai')).strftime("%Y-%m-%d_%H:%M:%S"))
+                st.download_button('Upload recording', type='primary',
+                                         data = buffer, mime="audio/wav", file_name=f'{filename}.wav', on_click=upl_amz)
+            if st.session_state.done:
                 with con.container():
                     st.success("Upload done! :tada:")
                 uplcon.empty()
+            
+
+
+            
             with recagain.container(): 
                 if st.button("Start a new transcript"):
                     wrapper.empty()
@@ -138,23 +168,7 @@ with tab2:
 
     with tab3:
 
-        if 'retrieve_doc' not in st.session_state:
-            st.session_state.retrieve_doc = ""
-
-        if 'report' not in st.session_state:
-            st.session_state.report = ""
-
-        if 'download_ready' not in st.session_state:
-            st.session_state.download_ready = ""
         
-        if 'download_report' not in st.session_state:
-            st.session_state.download_report = ""
-
-        if 'download_name' not in st.session_state:
-            st.session_state.download_name = ""
-
-        if 'report_name' not in st.session_state:
-            st.session_state.report_name = ""
 
         sects = [0,2,4,5]
 

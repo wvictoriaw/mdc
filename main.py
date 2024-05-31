@@ -38,6 +38,10 @@ if 'done' not in st.session_state:
 
 # execute
 st.title('mNote', anchor=False)
+st.toast('''mNote Update 31/5/24🩺
+
+Your most recent reports now show up first while editing reports. Yay!🩵
+         ''', icon='📑')
 
 s3 = boto3.Session(aws_access_key_id=st.secrets['aws_access_key'], 
                     aws_secret_access_key=st.secrets['aws_secret_access_key'],
@@ -45,6 +49,8 @@ s3 = boto3.Session(aws_access_key_id=st.secrets['aws_access_key'],
 cli = s3.client('s3')
 
 tab1, tab2, tab3 = st.tabs(["Record & Scribe", "View Summary", "Report Generator"])
+
+
 
 with tab1:
     st.subheader('Record Consultation', anchor=False)

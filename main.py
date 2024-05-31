@@ -181,6 +181,7 @@ with tab2:
             st.session_state.retrieve_doc = st.selectbox("Select Scribe:", scribes)
         else:
             scribes = [x['Key'] for x in cli.list_objects_v2(Bucket='mdc-reports')['Contents']]
+            scribes.sort(reverse=True)
             st.session_state.retrieve_doc = st.selectbox("Select Report:", scribes)
         load_report = st.button("Load Report")
 

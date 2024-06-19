@@ -264,8 +264,7 @@ with tab2:
                     label="Download Summary",
                     data = pdf_stream,
                     file_name = f'mNote_{st.session_state.download_name[:-4]}.pdf',
-                    mime = 'application/pdf',
-                    type = 'primary'
+                    mime = 'application/pdf'
                 )
             if download_report:
                 st.session_state.download_ready = False

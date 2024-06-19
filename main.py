@@ -82,7 +82,7 @@ with tab1:
                     wrapper.empty()
             with uplcon.container():
                 filename = str(datetime.now().astimezone(ZoneInfo('Asia/Shanghai')).strftime("%Y-%m-%d_%H:%M:%S"))
-                st.download_button('Upload recording', type='primary',
+                st.download_button('Upload recording',
                                          data = buffer, mime="audio/wav", file_name=f'{filename}.wav', on_click=upl_amz)
             if st.session_state.done:
                 with con.container():

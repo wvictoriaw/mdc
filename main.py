@@ -186,6 +186,10 @@ with tab2:
             st.session_state.retrieve_doc = st.selectbox("Select Report:", scribes)
         load_report = st.button("Load Report")
 
+        if st.button("Create New Blank Report"):
+            st.session_state.report = "- NEW REPORT -"
+            st.session_state.report_name = ""
+
         if load_report:
             if edit_or_create == "Generate a new report":
                 scr = cli.get_object(Bucket='mdc-output', Key=st.session_state.retrieve_doc+'/summary.json')['Body'].read().decode('utf-8')
@@ -212,7 +216,7 @@ with tab2:
                 st.session_state.report_name = st.session_state.retrieve_doc
                 
         
-        with st.form("report_generator"):
+        with st.form("report_generator",clear_on_submit=False):
             if len(st.session_state.report) > 5:
                 output = st_quill(value=st.session_state.report, html=True)
 
@@ -223,14 +227,17 @@ with tab2:
                 submitted = st.form_submit_button("Save")
                 
                 if submitted:
-                    st.session_state.report = output
-                    st.session_state.report_name = report_name
+                    if len(report_name.strip()) < 1:
+                        st.warning("Please enter report name.")
+                    else:
+                        st.session_state.report = output
+                        st.session_state.report_name = report_name
 
-                    cli.put_object(Bucket='mdc-reports', Key=f'{st.session_state.report_name}.txt', Body=st.session_state.report)
+                        cli.put_object(Bucket='mdc-reports', Key=f'{st.session_state.report_name}.txt', Body=st.session_state.report)
 
-                    st.success("Report saved! :tada:")
+                        st.success("Report saved! :tada:")
 
-                    st.session_state.download_ready = True
+                        st.session_state.download_ready = True
                 
 
         st.subheader("Download a Report", anchor=None)

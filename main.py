@@ -59,7 +59,10 @@ with tab1:
             audio.export(buffer, format="wav")
             con = st.empty()
             with con.container():
-                    st.success("Ready for download! :tada:")
+                    if buffer.getbuffer().nbytes < 1000000: 
+                        st.warning("Your recording was not captured, please try again!")
+                    else:
+                        st.success("Ready for download! :tada:")
             def upl_amz():
                 recagain.empty()
                 con.empty()
@@ -158,14 +161,17 @@ with tab2:
         wanted = [0,2,5] if typ == "Patient's View" else [4]
         
         load.empty()
-        for i in wanted:
-            sect = sections[i]
-            title = sect['SectionName'].replace("_", " ").title()
-            st.subheader(f':blue[{title}]', anchor=False)
-            container = st.container(border=True)
-            for summ in sect['Summary']:
-                seg = summ['SummarizedSegment']
-                container.write(seg.replace("$", "\$"))
+        if len(sections) < 5:
+            st.warning("This transcript is empty. Please record again.")
+        else:
+            for i in wanted:
+                sect = sections[i]
+                title = sect['SectionName'].replace("_", " ").title()
+                st.subheader(f':blue[{title}]', anchor=False)
+                container = st.container(border=True)
+                for summ in sect['Summary']:
+                    seg = summ['SummarizedSegment']
+                    container.write(seg.replace("$", "\$"))
 
     with tab3:
 
@@ -197,20 +203,22 @@ with tab2:
                 sections = json_content['ClinicalDocumentation']['Sections']
             
                 txt = ""
-
-                for i in sects:
-                    sect = sections[i]
-                    title = sect['SectionName'].replace("_", " ").title()
-                    txt += f'''<br>
-        <h2 style='color:#005a97; font-family:sans-serif; font-size:18pt'>{title}</h2>
-        <div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
-                    for summ in sect['Summary']:
-                        seg = summ['SummarizedSegment']
-                        txt += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
-                    txt += "</div>"
-                
-                st.session_state.report = txt
-                st.session_state.report_name = summary[:10]
+                if len(sections) < 5:
+                    st.warning("This transcript is empty. Please record again.")
+                else:
+                    for i in sects:
+                        sect = sections[i]
+                        title = sect['SectionName'].replace("_", " ").title()
+                        txt += f'''<br>
+            <h2 style='color:#005a97; font-family:sans-serif; font-size:18pt'>{title}</h2>
+            <div style='padding:10px 25px;border:1px solid #879198;border-radius:10px'>'''
+                        for summ in sect['Summary']:
+                            seg = summ['SummarizedSegment']
+                            txt += f'''<p style='font-family:sans-serif;line-height:25pt;'>{seg}</p>'''
+                        txt += "</div>"
+                    
+                    st.session_state.report = txt
+                    st.session_state.report_name = summary[:10]
             else:
                 st.session_state.report = cli.get_object(Bucket="mdc-reports", Key=st.session_state.retrieve_doc)['Body'].read().decode('utf-8')
                 st.session_state.report_name = st.session_state.retrieve_doc
